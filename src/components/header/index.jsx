@@ -1,10 +1,15 @@
 import React, { Component } from 'react'
+import {withRouter} from 'react-router-dom'
+import { Modal } from 'antd';
 import moment from 'moment'
 import {reqWeather} from '../../api'
+import LinkButton from '../link-button'
+import menuList from '../../config/menuConfig'
 import memoryUtils from '../../utils/memoryUtils'
+import storageUtils from '../../utils/storageUtils'
 import './index.less'
 //头部导航栏的组件
-export default class header extends Component {
+class Header extends Component {
 
     state = {
         currentTime: moment().format('YYYY-MM-DD HH:mm:ss'),
@@ -13,7 +18,7 @@ export default class header extends Component {
     }
 
     getTime = () => {
-        setInterval(() => {
+        this.intervalId = setInterval(() => {
             const currentTime = moment().format('YYYY-MM-DD HH:mm:ss')
             this.setState({currentTime})
         },1000)
@@ -23,6 +28,42 @@ export default class header extends Component {
         const {dayPictureUrl, weather} = await reqWeather('北京')
         this.setState({dayPictureUrl, weather})
     }
+
+    getTitle = () => {
+        const path = this.props.location.pathname
+        let title;
+        menuList.forEach(item => {
+            if (item.key === path){  //如果当前item对象的key与path一样，item的title就是需要显示的title
+                title = item.title
+            }else if(item.children){
+                //在所有子Itme中查找匹配的
+                const cItem = item.children.find(cItem => cItem.key === path)
+                if(cItem){
+                    //取出它的title
+                    title = cItem.title
+                }
+            }
+        })
+        return title
+    }
+
+    /**
+     * 退出登录
+     */
+    logOut = () => {
+        Modal.confirm({
+            content: '确定退出吗?',
+            onOk: () => {
+                console.log('OK',this);
+                //删除保存的user数据
+                storageUtils.removeUser()
+                memoryUtils.user = {}
+                //跳转到login
+                this.props.history.replace('/login')
+            }
+          });
+    }
+
     /**
      * 第一次render之后执行一次
      * 一般在此执行异步操作：发ajax请求/启动定时器
@@ -34,19 +75,28 @@ export default class header extends Component {
         this.getWeather()
     }
 
+    /**
+     * 当前组件卸载之前调用
+     */
+
+    componentWillUnmount () {
+        //清除定时器
+        clearInterval(this.intervalId)
+    }
+
     render() {
 
         const {currentTime,dayPictureUrl,weather} = this.state;
         const username = memoryUtils.user.userName;
-
+        const title = this.getTitle()
         return (
             <div className='header'>
                 <div className="header-top">
                     <span>欢迎，{username}</span>
-                    <a href="javascript:">退出</a>
+                    <LinkButton onClick={this.logOut}>退出</LinkButton>
                 </div>
                 <div className="header-bottom">
-                    <div className="header-bottom-left">首页</div>
+                    <div className="header-bottom-left">{title}</div>
                     <div className="header-bottom-right">
                         <span>{currentTime}</span>
                         <img src={dayPictureUrl} alt="weather"/>
@@ -57,3 +107,5 @@ export default class header extends Component {
         )
     }
 }
+
+export default withRouter(Header)

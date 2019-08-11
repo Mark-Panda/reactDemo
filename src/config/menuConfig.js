@@ -5,8 +5,8 @@ const menuList = [
         icon: 'pie-chart'
     },
     {
-        title: '商品',
-        key: '/product',
+        title: '商品管理',
+        key: '/products',
         icon: 'appstore',
         children: [
             {
