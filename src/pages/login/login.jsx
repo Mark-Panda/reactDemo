@@ -1,7 +1,11 @@
 import React, { Component } from 'react'
-import { Form, Icon, Input, Button } from 'antd';
+import { Form, Icon, Input, Button , message} from 'antd';
+import {Redirect} from 'react-router-dom'
 import './login.less';
-import logo from './images/logos.jpg'
+import logo from '../../assets/images/logos.jpg'
+import {reqLogin} from '../../api'
+import memoryUtils from '../../utils/memoryUtils';
+import storageUtils from '../../utils/storageUtils'
 
 const Item = Form.Item  //不能写在import之前
 /**
@@ -14,10 +18,26 @@ class Login extends Component {
         //阻止事件的默认行为
         event.preventDefault()
         //对所有的表单字段进行检验
-        this.props.form.validateFields((err, values) => {
+        this.props.form.validateFields(async (err, values) => {
             //检验成功
             if (!err) {
                 console.log('提交登录的ajax请求',values);
+                //请求登录
+                const {username, password} = values;
+                const result = await reqLogin(username, password)
+                console.log('请求成功',result);
+                // const result = response.data
+                if(result.status === 200){
+                    message.success('登录成功')
+                    const user = result.data
+                    memoryUtils.user = user   //保存在内存中
+                    storageUtils.saveUser(user)   //保存到local中
+                    //跳转   不需要回退
+                    this.props.history.replace('/')
+                }else{
+                    //登录失败提示错误信息
+                    message.error(result.msg)
+                }
             }else{
                 console.log('校验失败')
             }
@@ -48,9 +68,14 @@ class Login extends Component {
     }
 
     render() {
+
+        //如果用户已经登录，自动跳转管理界面
+        const user = memoryUtils.user
+        if(user && user.userId){
+            return <Redirect to='/'/>
+        }
         //得到具有强大功能的表单数据
-        const {getFieldDecorator} = this.props.form
-        
+        const {getFieldDecorator} = this.props.form    
         return (
             <div className='login'>
                 <header className='login-header'>
